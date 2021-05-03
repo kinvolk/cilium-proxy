@@ -9,6 +9,8 @@
 #include "common/config/utility.h"
 #include "common/protobuf/protobuf.h"
 
+#include "envoy/api/v2/auth/common.pb.h"
+
 namespace Envoy {
 namespace Cilium {
 
@@ -220,7 +222,7 @@ class PolicyInstanceImpl : public PolicyInstance {
    public:
     PortNetworkPolicyRule(const NetworkPolicyMap& parent,
                           const cilium::PortNetworkPolicyRule& rule)
-        : name_(rule.name()), l7_proto_(rule.l7_proto()) {
+        : name_(rule.name()), l7_proto_(rule.l7_proto()), is_spiffe_(false) {
       for (const auto& remote : rule.remote_policies()) {
         ENVOY_LOG(
             trace,
@@ -230,89 +232,99 @@ class PolicyInstanceImpl : public PolicyInstance {
       }
       if (rule.has_downstream_tls_context()) {
         auto config = rule.downstream_tls_context();
-        envoy::extensions::transport_sockets::tls::v3::DownstreamTlsContext
-            context_config;
-        auto tls_context = context_config.mutable_common_tls_context();
-        if (config.trusted_ca() != "") {
-          auto require_tls_certificate =
-              context_config.mutable_require_client_certificate();
-          require_tls_certificate->set_value(true);
-          auto validation_context = tls_context->mutable_validation_context();
-          auto trusted_ca = validation_context->mutable_trusted_ca();
-          trusted_ca->set_inline_string(config.trusted_ca());
-        }
-        if (config.certificate_chain() != "") {
-          auto tls_certificate = tls_context->add_tls_certificates();
-          auto certificate_chain = tls_certificate->mutable_certificate_chain();
-          certificate_chain->set_inline_string(config.certificate_chain());
-          if (config.private_key() != "") {
-            auto private_key = tls_certificate->mutable_private_key();
-            private_key->set_inline_string(config.private_key());
+        if (config.has_spiffe()) {
+          processSpiffe(config.spiffe());
+        } else{
+          envoy::extensions::transport_sockets::tls::v3::DownstreamTlsContext
+              context_config;
+          auto tls_context = context_config.mutable_common_tls_context();
+          if (config.trusted_ca() != "") {
+            auto require_tls_certificate =
+                context_config.mutable_require_client_certificate();
+            require_tls_certificate->set_value(true);
+            auto validation_context = tls_context->mutable_validation_context();
+            auto trusted_ca = validation_context->mutable_trusted_ca();
+            trusted_ca->set_inline_string(config.trusted_ca());
+          }
+          if (config.certificate_chain() != "") {
+            auto tls_certificate = tls_context->add_tls_certificates();
+            auto certificate_chain = tls_certificate->mutable_certificate_chain();
+            certificate_chain->set_inline_string(config.certificate_chain());
+            if (config.private_key() != "") {
+              auto private_key = tls_certificate->mutable_private_key();
+              private_key->set_inline_string(config.private_key());
+            } else {
+              throw EnvoyException(
+                  absl::StrCat("PortNetworkPolicyRule: TLS context has no "
+                              "private key in rule ",
+                              name_));
+            }
           } else {
             throw EnvoyException(
                 absl::StrCat("PortNetworkPolicyRule: TLS context has no "
-                             "private key in rule ",
-                             name_));
+                            "certificate chain in rule ",
+                            name_));
           }
-        } else {
-          throw EnvoyException(
-              absl::StrCat("PortNetworkPolicyRule: TLS context has no "
-                           "certificate chain in rule ",
-                           name_));
+          for (int i = 0; i < config.server_names_size(); i++) {
+            server_names_.emplace_back(config.server_names(i));
+          }
+          server_config_ = std::make_unique<
+              Extensions::TransportSockets::Tls::ServerContextConfigImpl>(
+              context_config, parent.transport_socket_factory_context_);
+          server_context_ =
+              parent.transport_socket_factory_context_.sslContextManager()
+                  .createSslServerContext(
+                      parent.transport_socket_factory_context_.scope(),
+                      *server_config_, server_names_, nullptr);
         }
-        for (int i = 0; i < config.server_names_size(); i++) {
-          server_names_.emplace_back(config.server_names(i));
-        }
-        server_config_ = std::make_unique<
-            Extensions::TransportSockets::Tls::ServerContextConfigImpl>(
-            context_config, parent.transport_socket_factory_context_);
-        server_context_ =
-            parent.transport_socket_factory_context_.sslContextManager()
-                .createSslServerContext(
-                    parent.transport_socket_factory_context_.scope(),
-                    *server_config_, server_names_, nullptr);
       }
       if (rule.has_upstream_tls_context()) {
         auto config = rule.upstream_tls_context();
-        envoy::extensions::transport_sockets::tls::v3::UpstreamTlsContext
-            context_config;
-        auto tls_context = context_config.mutable_common_tls_context();
-        if (config.trusted_ca() != "") {
-          auto validation_context = tls_context->mutable_validation_context();
-          auto trusted_ca = validation_context->mutable_trusted_ca();
-          trusted_ca->set_inline_string(config.trusted_ca());
+        if (config.has_spiffe()) {
+          processSpiffe(config.spiffe());
         } else {
-          throw EnvoyException(
-              absl::StrCat("PortNetworkPolicyRule: Upstream TLS context has no "
-                           "trusted CA in rule ",
-                           name_));
-        }
-        if (config.certificate_chain() != "") {
-          auto tls_certificate = tls_context->add_tls_certificates();
-          auto certificate_chain = tls_certificate->mutable_certificate_chain();
-          certificate_chain->set_inline_string(config.certificate_chain());
-          if (config.private_key() != "") {
-            auto private_key = tls_certificate->mutable_private_key();
-            private_key->set_inline_string(config.private_key());
-          }
-        }
-        if (config.server_names_size() > 0) {
-          if (config.server_names_size() > 1) {
+          envoy::extensions::transport_sockets::tls::v3::UpstreamTlsContext
+              context_config;
+          auto tls_context = context_config.mutable_common_tls_context();
+          if (config.trusted_ca() != "") {
+            auto validation_context = tls_context->mutable_validation_context();
+            auto trusted_ca = validation_context->mutable_trusted_ca();
+            trusted_ca->set_inline_string(config.trusted_ca());
+
+            ENVOY_LOG(debug, "trusted ca is {}", config.trusted_ca());
+          } else {
             throw EnvoyException(
-                absl::StrCat("PortNetworkPolicyRule: Upstream TLS context has "
-                             "more than one server name in rule ",
-                             name_));
+                absl::StrCat("PortNetworkPolicyRule: Upstream TLS context has no "
+                            "trusted CA in rule ",
+                            name_));
           }
-          context_config.set_sni(config.server_names(1));
+          if (config.certificate_chain() != "") {
+            auto tls_certificate = tls_context->add_tls_certificates();
+            auto certificate_chain = tls_certificate->mutable_certificate_chain();
+            certificate_chain->set_inline_string(config.certificate_chain());
+            if (config.private_key() != "") {
+              auto private_key = tls_certificate->mutable_private_key();
+              private_key->set_inline_string(config.private_key());
+            }
+          }
+          if (config.server_names_size() > 0) {
+            if (config.server_names_size() > 1) {
+              throw EnvoyException(
+                  absl::StrCat("PortNetworkPolicyRule: Upstream TLS context has "
+                              "more than one server name in rule ",
+                              name_));
+            }
+            context_config.set_sni(config.server_names(1));
+          }
+          client_config_ = std::make_unique<
+              Extensions::TransportSockets::Tls::ClientContextConfigImpl>(
+              context_config, parent.transport_socket_factory_context_);
+          client_context_ =
+              parent.transport_socket_factory_context_.sslContextManager()
+                  .createSslClientContext(
+                      parent.transport_socket_factory_context_.scope(),
+                      *client_config_, nullptr);
         }
-        client_config_ = std::make_unique<
-            Extensions::TransportSockets::Tls::ClientContextConfigImpl>(
-            context_config, parent.transport_socket_factory_context_);
-        client_context_ =
-            parent.transport_socket_factory_context_.sslContextManager()
-                .createSslClientContext(
-                    parent.transport_socket_factory_context_.scope(),
-                    *client_config_, nullptr);
       }
       if (rule.has_http_rules()) {
         for (const auto& http_rule : rule.http_rules().http_rules()) {
@@ -430,6 +442,21 @@ class PolicyInstanceImpl : public PolicyInstance {
       return client_context_;
     }
 
+    bool isSpiffe() const override {
+      return is_spiffe_;
+    }
+
+    std::vector<std::string> getSpiffePeerIDs() const override {
+      return spiffe_peer_ids_;
+    }
+
+    void processSpiffe(const ::cilium::Spiffe& spiffe) {
+      is_spiffe_ = true;
+      for (int i = 0; i < spiffe.peer_ids_size(); i++) {
+        spiffe_peer_ids_.push_back(spiffe.peer_ids(i));
+      }
+    }
+
     Ssl::ServerContextConfigPtr server_config_;
     std::vector<std::string> server_names_;
     Ssl::ServerContextSharedPtr server_context_;
@@ -446,6 +473,9 @@ class PolicyInstanceImpl : public PolicyInstance {
     std::string l7_proto_{};
     std::vector<L7NetworkPolicyRule> l7_allow_rules_;
     std::vector<L7NetworkPolicyRule> l7_deny_rules_;
+
+    bool is_spiffe_;
+    std::vector<std::string> spiffe_peer_ids_;
   };
   using PortNetworkPolicyRuleConstSharedPtr =
       std::shared_ptr<const PortNetworkPolicyRule>;
