@@ -36,6 +36,9 @@ class PortPolicy {
   virtual Ssl::ContextSharedPtr getServerTlsContext() const PURE;
   virtual Ssl::ContextConfig& getClientTlsContextConfig() const PURE;
   virtual Ssl::ContextSharedPtr getClientTlsContext() const PURE;
+
+  virtual bool isSpiffe() const PURE;
+  virtual std::vector<std::string> getSpiffePeerIDs() const PURE;
 };
 using PortPolicyConstSharedPtr = std::shared_ptr<const PortPolicy>;
 
