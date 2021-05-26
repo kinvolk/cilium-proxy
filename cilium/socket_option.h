@@ -110,18 +110,21 @@ class SocketMarkOption : public Network::Socket::Option,
 };
 
 class PolicyInstance;
+class SVIDMap;
 
 class SocketOption : public SocketMarkOption {
  public:
   SocketOption(std::shared_ptr<const PolicyInstance> policy, bool no_mark,
                uint32_t source_identity, uint32_t destination_identity,
                bool ingress, uint16_t port, std::string&& pod_ip,
-               Network::Address::InstanceConstSharedPtr src_address)
+               Network::Address::InstanceConstSharedPtr src_address,
+               std::shared_ptr<const SVIDMap> svids)
       : SocketMarkOption(no_mark, source_identity, ingress, src_address),
         policy_(policy),
         destination_identity_(destination_identity),
         port_(port),
-        pod_ip_(std::move(pod_ip)) {
+        pod_ip_(std::move(pod_ip)),
+        svids_(svids) {
     ENVOY_LOG(
         debug,
         "Cilium SocketOption(): source_identity: {}, destination_identity: {}, "
@@ -134,6 +137,7 @@ class SocketOption : public SocketMarkOption {
   uint32_t destination_identity_;
   uint16_t port_;
   std::string pod_ip_;
+  const std::shared_ptr<const SVIDMap> svids_;
 };
 
 static inline const Cilium::SocketOption* GetSocketOption(
