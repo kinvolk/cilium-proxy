@@ -125,9 +125,13 @@ Http::FilterHeadersStatus AccessFilter::decodeHeaders(
                                                            std::make_unique<Network::UpstreamServerName>(parsed_authority.host_),
                                                            StreamInfo::FilterState::StateType::Mutable);
           }
-          callbacks_->streamInfo().filterState()->setData(Network::UpstreamSubjectAltNames::key(),
-                                                         std::make_unique<Network::UpstreamSubjectAltNames>(std::vector<std::string>{std::string(parsed_authority.host_)}),
-                                                         StreamInfo::FilterState::StateType::Mutable);
+          // TODO(Mauricio): Removed subaltname validation in all the cases.
+          // It can be renabled by checking if the policy is a spiffe one
+          // (by calling isSpiffe())
+
+          //callbacks_->streamInfo().filterState()->setData(Network::UpstreamSubjectAltNames::key(),
+          //                                               std::make_unique<Network::UpstreamSubjectAltNames>(std::vector<std::string>{std::string(parsed_authority.host_)}),
+          //                                               StreamInfo::FilterState::StateType::Mutable);
         }
       }
 
