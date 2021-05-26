@@ -47,7 +47,8 @@ CILIUM_PROTO_SOURCES := \
 	cilium/api/l7policy.proto \
 	cilium/api/network_filter.proto \
 	cilium/api/npds.proto \
-	cilium/api/nphds.proto
+	cilium/api/nphds.proto \
+	cilium/api/svids.proto
 CILIUM_PROTO_DIRS := $(sort $(dir $(CILIUM_PROTO_SOURCES)))
 CILIUM_GO_TARGETS := $(addprefix $(GO_OUT)/,$(CILIUM_PROTO_SOURCES:.proto=.pb.go)) \
 	$(addprefix $(GO_OUT)/,$(CILIUM_PROTO_SOURCES:.proto=.pb.validate.go))
