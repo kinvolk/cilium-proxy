@@ -81,6 +81,11 @@ message PortNetworkPolicy {
   repeated PortNetworkPolicyRule rules = 3;
 }
 
+message Spiffe {
+  // List of allowed peer spiffe ids.
+  repeated string peer_ids = 1;
+}
+
 message TLSContext {
   // CA certificates. If present, the counterparty must provide a valid
   // certificate.
@@ -96,6 +101,8 @@ message TLSContext {
   // present to the client. For upstream this will be used as the SNI on the
   // client connection.
   repeated string server_names = 4;
+
+  Spiffe spiffe = 5;
 }
 
 // A network policy rule, as a conjunction of predicates on L3/L7 flows.
