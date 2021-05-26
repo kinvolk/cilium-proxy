@@ -67,6 +67,7 @@ SINGLETON_MANAGER_REGISTRATION(cilium_bpf_conntrack);
 SINGLETON_MANAGER_REGISTRATION(cilium_host_map);
 SINGLETON_MANAGER_REGISTRATION(cilium_ipcache);
 SINGLETON_MANAGER_REGISTRATION(cilium_network_policy);
+SINGLETON_MANAGER_REGISTRATION(cilium_svid_map);
 
 namespace {
 
@@ -89,6 +90,16 @@ std::shared_ptr<const Cilium::NetworkPolicyMap> createPolicyMap(
       SINGLETON_MANAGER_REGISTERED_NAME(cilium_network_policy),
       [&context, &ct] {
         auto map = std::make_shared<Cilium::NetworkPolicyMap>(context, ct);
+        map->startSubscription();
+        return map;
+      });
+}
+
+std::shared_ptr<const Cilium::SVIDMap> createSVIDMap(
+    Server::Configuration::ListenerFactoryContext& context) {
+  return context.singletonManager().getTyped<const Cilium::SVIDMap>(
+      SINGLETON_MANAGER_REGISTERED_NAME(cilium_svid_map), [&context] {
+        auto map = std::make_shared<Cilium::SVIDMap>(context);
         map->startSubscription();
         return map;
       });
@@ -131,6 +142,8 @@ Config::Config(const ::cilium::BpfMetadata& config,
   if (ipcache_ == nullptr) {
     hosts_ = createHostMap(context);
   }
+
+  svids_ = createSVIDMap(context);
 
   // Get the shared policy provider, or create it if not already created.
   // Note that the API config source is assumed to be the same for all filter
