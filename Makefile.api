@@ -78,14 +78,14 @@ $(ENVOY_GO_TARGETS): $(ENVOY_PROTO_SOURCES) Makefile.api
 	$(QUIET)set -e; \
 	for path in $(ENVOY_PROTO_DIRS) ; do \
 		$(ECHO_GEN) envoy/$$path; \
-		PATH=$(PATH):$(BIN_PATH) $(PROTOC) -I $(ENVOY_API_PROTO_PATH) -I $(CILIUM_PROTO_PATH) $(PROTO_DEPS) --go_out=plugins=grpc$(GO_MAPPINGS):$(GO_OUT) $${path}*.proto; \
+		PATH=$(BIN_PATH):$(PATH) $(PROTOC) -I $(ENVOY_API_PROTO_PATH) -I $(CILIUM_PROTO_PATH) $(PROTO_DEPS) --go_out=plugins=grpc$(GO_MAPPINGS):$(GO_OUT) $${path}*.proto; \
 	done
 
 $(CILIUM_GO_TARGETS): $(CILIUM_PROTO_SOURCES) Makefile.api
 	$(QUIET)set -e; \
 	for path in $(CILIUM_PROTO_DIRS) ; do \
 		$(ECHO_GEN) envoy/$$path; \
-		PATH=$(PATH):$(BIN_PATH) $(PROTOC) -I $(ENVOY_API_PROTO_PATH) -I $(CILIUM_PROTO_PATH) $(PROTO_DEPS) --go_out=plugins=grpc$(GO_MAPPINGS):$(GO_OUT) --validate_out=lang=go$(GO_MAPPINGS):$(GO_OUT) $${path}*.proto; \
+		PATH=$(BIN_PATH):$(PATH) $(PROTOC) -I $(ENVOY_API_PROTO_PATH) -I $(CILIUM_PROTO_PATH) $(PROTO_DEPS) --go_out=plugins=grpc$(GO_MAPPINGS):$(GO_OUT) --validate_out=lang=go$(GO_MAPPINGS):$(GO_OUT) $${path}*.proto; \
 	done
 
 godeps:
