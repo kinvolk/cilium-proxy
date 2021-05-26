@@ -266,7 +266,7 @@ bool Config::getMetadata(Network::ConnectionSocket& socket) {
   bool no_mark = npmap_->is_sidecar_;
   socket.addOption(std::make_shared<Cilium::SocketOption>(
       policy, no_mark, source_identity, destination_identity, is_ingress_, dip->port(),
-      std::move(pod_ip), src_address));
+      std::move(pod_ip), src_address, svids_));
   return true;
 }
 
