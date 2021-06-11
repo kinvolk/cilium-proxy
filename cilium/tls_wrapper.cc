@@ -63,7 +63,11 @@ class SslSocketWrapper : public Network::TransportSocket {
             ssl_socket_->setTransportSocketCallbacks(callbacks);
           }
         } else {
-          const std::string& id = option->svids_->getSpiffeID(option->identity_);
+          //TODO(Mauricio): This only works for ingress terminatingTLS. How to
+          //extend for both cases?
+          //uint32_t identity = option->identity_;
+          uint32_t identity = option->destination_identity_;
+          const std::string& id = option->svids_->getSpiffeID(identity);
 
           if (id == std::string("")) {
             ENVOY_LOG_MISC(info, "connection from pod without spiffe ID assigned");
@@ -73,9 +77,9 @@ class SslSocketWrapper : public Network::TransportSocket {
 
           ENVOY_LOG_MISC(info, "connection from {}", id);
 
-          const std::string& trusted_ca_bytes = option->svids_->getTrustedCA(option->identity_);
-          const std::string& crt_bytes = option->svids_->getCrt(option->identity_);
-          const std::string& key_bytes = option->svids_->getKey(option->identity_);
+          const std::string& trusted_ca_bytes = option->svids_->getTrustedCA(identity);
+          const std::string& crt_bytes = option->svids_->getCrt(identity);
+          const std::string& key_bytes = option->svids_->getKey(identity);
 
           envoy::extensions::transport_sockets::tls::v3::UpstreamTlsContext context_config;
           auto tls_context = context_config.mutable_common_tls_context();
