@@ -63,10 +63,7 @@ class SslSocketWrapper : public Network::TransportSocket {
             ssl_socket_->setTransportSocketCallbacks(callbacks);
           }
         } else {
-          //TODO(Mauricio): This only works for ingress terminatingTLS. How to
-          //extend for both cases?
-          //uint32_t identity = option->identity_;
-          uint32_t identity = option->destination_identity_;
+          uint32_t identity = option->ingress_ ? option->destination_identity_: option->identity_;
           const std::string& id = option->svids_->getSpiffeID(identity);
 
           if (id == std::string("")) {
