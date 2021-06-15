@@ -217,7 +217,12 @@ bool Config::getMetadata(Network::ConnectionSocket& socket) {
 
   // Resolve the destination security ID for egress
   uint32_t destination_identity = 0;
-  if (!is_ingress_) {
+  // TODO(Mauricio): The destintaion_identity_ is needed for ingress
+  // termiatingTLS spiffe support because cilium needs to know the identity of
+  // the destination pod to use the right certificates.
+  // Should this logic be extended to avoid some overhead when this information
+  // is not needed?
+  //if (!is_ingress_) {
     if (ipcache_ != nullptr) {
       destination_identity = ipcache_->resolve(dip);
     } else if (hosts_ != nullptr) {
@@ -231,7 +236,7 @@ bool Config::getMetadata(Network::ConnectionSocket& socket) {
                 "cilium.bpf_metadata (egress): Destination identity defaults "
                 "to WORLD");
     }
-  }
+  //}
 
   // Only use the original source address if permitted and the other node is not
   // in the same node and is not classified as WORLD.
