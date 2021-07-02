@@ -316,6 +316,8 @@ func (m *TLSContext) Validate() error {
 		}
 	}
 
+	// no validation rules for Dstport
+
 	return nil
 }
 
