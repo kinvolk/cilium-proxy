@@ -4,6 +4,7 @@
 #include "cilium/conntrack.h"
 #include "cilium/host_map.h"
 #include "cilium/svids.h"
+#include "cilium/bundles.h"
 #include "cilium/ipcache.h"
 #include "cilium/network_policy.h"
 #include "common/common/logger.h"
@@ -36,6 +37,7 @@ class Config : Logger::Loggable<Logger::Id::config> {
   Cilium::IPCacheSharedPtr ipcache_{};
   std::shared_ptr<const Cilium::PolicyHostMap> hosts_{};
   std::shared_ptr<const Cilium::SVIDMap> svids_{};
+  std::shared_ptr<const Cilium::BundlesMap> bundles_{};
 };
 
 typedef std::shared_ptr<Config> ConfigSharedPtr;

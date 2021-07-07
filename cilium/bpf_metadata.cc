@@ -68,6 +68,7 @@ SINGLETON_MANAGER_REGISTRATION(cilium_host_map);
 SINGLETON_MANAGER_REGISTRATION(cilium_ipcache);
 SINGLETON_MANAGER_REGISTRATION(cilium_network_policy);
 SINGLETON_MANAGER_REGISTRATION(cilium_svid_map);
+SINGLETON_MANAGER_REGISTRATION(cilium_bundles_map);
 
 namespace {
 
@@ -100,6 +101,16 @@ std::shared_ptr<const Cilium::SVIDMap> createSVIDMap(
   return context.singletonManager().getTyped<const Cilium::SVIDMap>(
       SINGLETON_MANAGER_REGISTERED_NAME(cilium_svid_map), [&context] {
         auto map = std::make_shared<Cilium::SVIDMap>(context);
+        map->startSubscription();
+        return map;
+      });
+}
+
+std::shared_ptr<const Cilium::BundlesMap> createBundlesMap(
+    Server::Configuration::ListenerFactoryContext& context) {
+  return context.singletonManager().getTyped<const Cilium::BundlesMap>(
+      SINGLETON_MANAGER_REGISTERED_NAME(cilium_bundles_map), [&context] {
+        auto map = std::make_shared<Cilium::BundlesMap>(context);
         map->startSubscription();
         return map;
       });
@@ -144,6 +155,9 @@ Config::Config(const ::cilium::BpfMetadata& config,
   }
 
   svids_ = createSVIDMap(context);
+
+  // TODO(Mauricio): context is probably not needed here!
+  bundles_ = createBundlesMap(context);
 
   // Get the shared policy provider, or create it if not already created.
   // Note that the API config source is assumed to be the same for all filter
@@ -271,7 +285,7 @@ bool Config::getMetadata(Network::ConnectionSocket& socket) {
   bool no_mark = npmap_->is_sidecar_;
   socket.addOption(std::make_shared<Cilium::SocketOption>(
       policy, no_mark, source_identity, destination_identity, is_ingress_, dip->port(),
-      std::move(pod_ip), src_address, svids_));
+      std::move(pod_ip), src_address, svids_, bundles_));
   return true;
 }
 
