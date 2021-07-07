@@ -46,7 +46,8 @@ CILIUM_PROTO_SOURCES := \
 	cilium/api/network_filter.proto \
 	cilium/api/npds.proto \
 	cilium/api/nphds.proto \
-	cilium/api/svids.proto
+	cilium/api/svids.proto \
+	cilium/api/bundles.proto
 CILIUM_PROTO_DIRS := $(sort $(dir $(CILIUM_PROTO_SOURCES)))
 RAW_GO_MAPPINGS += $(foreach proto,$(CILIUM_PROTO_SOURCES),$(proto)=github.com/cilium/proxy/go/$(dir $(proto)))
 

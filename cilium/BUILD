@@ -18,6 +18,7 @@ envoy_cc_library(
         "//cilium:network_policy_lib",
         "//cilium:socket_option_lib",
         "//cilium:svids_lib",
+        "//cilium:bundles_lib",
         "@envoy//include/envoy/network:transport_socket_interface",
         "@envoy//include/envoy/registry",
         "@envoy//include/envoy/server:transport_socket_config_interface",
@@ -245,6 +246,27 @@ envoy_cc_library(
 )
 
 envoy_cc_library(
+    name = "bundles_lib",
+    srcs = [
+        "bundles.cc",
+    ],
+    hdrs = [
+        "bundles.h",
+    ],
+    repository = "@envoy",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//cilium/api:bundles_cc_proto",
+        "@envoy//include/envoy/singleton:manager_interface",
+        "@envoy//source/common/common:assert_lib",
+        "@envoy//source/common/common:logger_lib",
+        "@envoy//source/common/network:address_lib",
+        "@envoy//source/common/router:config_utility_lib",
+        "//cilium:grpc_subscription_lib",
+    ],
+)
+
+envoy_cc_library(
     name = "bpf_metadata_lib",
     srcs = [
         "bpf_metadata.cc",
@@ -261,6 +283,7 @@ envoy_cc_library(
         "//cilium:grpc_subscription_lib",
         "//cilium:ipcache_lib",
         "//cilium:svids_lib",
+        "//cilium:bundles_lib",
         "//cilium:network_policy_lib",
         "//cilium:socket_option_lib",
         "//cilium/api:bpf_metadata_cc_proto",
